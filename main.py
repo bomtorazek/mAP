@@ -6,7 +6,7 @@ import operator
 import sys
 import argparse
 import math
-
+from shapely.geometry import Polygon
 import numpy as np
 
 MINOVERLAP = 0.5 # default value (defined in the PASCAL VOC2012 challenge)
@@ -380,10 +380,10 @@ for txt_file in ground_truth_files_list:
     for line in lines_list:
         try:
             if "difficult" in line:
-                    class_name, left, top, right, bottom, _difficult = line.split()
+                    class_name, x1, y1, x2, y2, x3, y3, x4, y4 = line.split()
                     is_difficult = True
             else:
-                    class_name, left, top, right, bottom = line.split()
+                    class_name, x1, y1, x2, y2, x3, y3, x4, y4 = line.split()
         except ValueError:
             error_msg = "Error: File " + txt_file + " in the wrong format.\n"
             error_msg += " Expected: <class_name> <left> <top> <right> <bottom> ['difficult']\n"
@@ -394,7 +394,7 @@ for txt_file in ground_truth_files_list:
         # check if class is in the ignore list, if yes skip
         if class_name in args.ignore:
             continue
-        bbox = left + " " + top + " " + right + " " +bottom
+        bbox = f'{x1} {y1} {x2} {y2} {x3} {y3} {x4} {y4}'
         if is_difficult:
             bounding_boxes.append({"class_name":class_name, "bbox":bbox, "used":False, "difficult":True})
             is_difficult = False
@@ -477,7 +477,7 @@ for class_index, class_name in enumerate(gt_classes):
         lines = file_lines_to_list(txt_file)
         for line in lines:
             try:
-                tmp_class_name, confidence, left, top, right, bottom = line.split()
+                tmp_class_name, confidence, x1, y1, x2, y2, x3, y3, x4, y4  = line.split()
             except ValueError:
                 error_msg = "Error: File " + txt_file + " in the wrong format.\n"
                 error_msg += " Expected: <class_name> <confidence> <left> <top> <right> <bottom>\n"
@@ -485,7 +485,7 @@ for class_index, class_name in enumerate(gt_classes):
                 error(error_msg)
             if tmp_class_name == class_name:
                 #print("match")
-                bbox = left + " " + top + " " + right + " " +bottom
+                bbox = f'{x1} {y1} {x2} {y2} {x3} {y3} {x4} {y4}'
                 bounding_boxes.append({"confidence":confidence, "file_id":file_id, "bbox":bbox})
                 #print(bounding_boxes)
     # sort detection-results by decreasing confidence
@@ -553,17 +553,31 @@ with open(output_files_path + "/output.txt", 'w') as output_file:
                 # look for a class_name match
                 if obj["class_name"] == class_name:
                     bbgt = [ float(x) for x in obj["bbox"].split() ]
-                    bi = [max(bb[0],bbgt[0]), max(bb[1],bbgt[1]), min(bb[2],bbgt[2]), min(bb[3],bbgt[3])]
-                    iw = bi[2] - bi[0] + 1
-                    ih = bi[3] - bi[1] + 1
-                    if iw > 0 and ih > 0:
-                        # compute overlap (IoU) = area of intersection / area of union
-                        ua = (bb[2] - bb[0] + 1) * (bb[3] - bb[1] + 1) + (bbgt[2] - bbgt[0]
-                                        + 1) * (bbgt[3] - bbgt[1] + 1) - iw * ih
-                        ov = iw * ih / ua
+
+                    gt_polygon = Polygon([(bb[0], bb[1]), (bb[2], bb[3]), (bb[4], bb[5]), (bb[6], bb[7])])
+                    pred_polygon = Polygon([(bbgt[0], bbgt[1]), (bbgt[2], bbgt[3]), (bbgt[4], bbgt[5]), (bbgt[6], bbgt[7])])
+                    intersection = gt_polygon.intersection(pred_polygon)
+                    inter_area = intersection.area
+
+                    if inter_area >0:
+                        ua = gt_polygon.area + pred_polygon.area - inter_area
+                        ov = inter_area / ua
                         if ov > ovmax:
                             ovmax = ov
-                            gt_match = obj
+                            gt_match =obj
+
+
+                    # bi = [max(bb[0],bbgt[0]), max(bb[1],bbgt[1]), min(bb[2],bbgt[2]), min(bb[3],bbgt[3])]
+                    # iw = bi[2] - bi[0] + 1
+                    # ih = bi[3] - bi[1] + 1
+                    # if iw > 0 and ih > 0:
+                    #     # compute overlap (IoU) = area of intersection / area of union
+                    #     ua = (bb[2] - bb[0] + 1) * (bb[3] - bb[1] + 1) + (bbgt[2] - bbgt[0]
+                    #                     + 1) * (bbgt[3] - bbgt[1] + 1) - iw * ih
+                    #     ov = iw * ih / ua
+                    #     if ov > ovmax:
+                    #         ovmax = ov
+                    #         gt_match = obj
 
             # assign detection as true positive/don't care/false positive
             if show_animation:
