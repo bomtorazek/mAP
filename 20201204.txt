@@ -1,0 +1,23 @@
+python tools/train.py configs/config_143/cascade_multi.py --gpu-ids 0 --seed 1103 --fold 1
+python tools/train.py configs/config_143/cascade_binary.py --gpu-ids 1 --seed 1103 --fold 1
+
+python tools/train.py configs/config_143/cascade_binary_2.py --gpu-ids 0 --seed 1103 --fold 2
+python tools/train.py configs/config_143/cascade_binary_3.py --gpu-ids 1 --seed 1103 --fold 3
+python tools/train.py configs/config_143/cascade_binary_4.py --gpu-ids 2 --seed 1103 --fold 4
+
+python tools/train.py configs/config_143/cascade_binary_5.py --gpu-ids 2 --seed 1103 --fold 5
+
+
+--test
+python tools/test.py configs/config_143/cascade_multi.py work_dirs/cascade_multi/epoch_2.pth --out for_submit.pkl --eval segm
+python tools/test.py configs/config_143/cascade_binary.py work_dirs/cascade_binary/epoch_2.pth --out for_submit.pkl --eval segm --binary True
+
+--val
+python tools/test.py configs/config_143/cascade_binary_val1.py work_dirs/cascade_binary/epoch_2.pth --out for_submit.pkl --eval segm --binary True
+python tools/test.py configs/config_143/cascade_multi_val1.py work_dirs/cascade_multi/epoch_2.pth --out for_submit.pkl --eval segm
+
+
+
+ --gpu-ids 1 --seed 1103 --fold 1
+
+python main.py -na -np
